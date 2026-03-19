@@ -14,6 +14,7 @@
     "@modelcontextprotocol/sdk": "^1.23.0",
     "chalk": "^5.4.1",
     "express": "^5.1.0",
+    "googleapis": "^171.4.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
