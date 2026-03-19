@@ -4,6 +4,11 @@ import express, { Request, Response } from "express";
 import { z } from "zod";
 import chalk from "chalk";
 import { hello, echo } from "./tools.js";
+import { getAuthUrl, oauth2Client } from "./gmailAuth.js";
+import { deleteEmail, getRecentEmails, replyToEmail, sendEmail } from "./gmailService.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 // ============================================================================
 // Dev Logging Utilities
@@ -122,6 +127,87 @@ server.registerTool(
   }
 );
 
+// ---------- Get Recent Emails ----------
+server.registerTool(
+  "get_recent_emails",
+  {
+    title: "Get Recent Emails",
+    description: "Fetch the latest emails from Gmail",
+    inputSchema: {},
+    outputSchema: {
+      emails: z.array(z.any()),
+    },
+  },
+  async () => {
+    const emails = await getRecentEmails();
+    return {
+      content: [{ type: "text", text: JSON.stringify(emails) }],
+      structuredContent: { emails },
+    };
+  }
+);
+
+// ---------- Send Email ----------
+server.registerTool(
+  "send_email",
+  {
+    title: "Send Email",
+    description: "Send an email to a recipient",
+    inputSchema: {
+      to: z.string(),
+      subject: z.string(),
+      body: z.string(),
+    },
+    outputSchema: { status: z.string() },
+  },
+  async ({ to, subject, body }) => {
+    await sendEmail(to, subject, body);
+    return {
+      content: [{ type: "text", text: "Email sent successfully!" }],
+      structuredContent: { status: "sent" },
+    };
+  }
+);
+
+// ---------- Reply to Email ----------
+server.registerTool(
+  "reply_email",
+  {
+    title: "Reply to Email",
+    description: "Reply to a specific email by message ID",
+    inputSchema: {
+      messageId: z.string(),
+      body: z.string(),
+    },
+    outputSchema: { status: z.string() },
+  },
+  async ({ messageId, body }) => {
+    await replyToEmail(messageId, body);
+    return {
+      content: [{ type: "text", text: "Email replied successfully!" }],
+      structuredContent: { status: "replied" },
+    };
+  }
+);
+
+// ---------- Delete Email ----------
+server.registerTool(
+  "delete_email",
+  {
+    title: "Delete Email",
+    description: "Delete an email by message ID",
+    inputSchema: { messageId: z.string() },
+    outputSchema: { status: z.string() },
+  },
+  async ({ messageId }) => {
+    await deleteEmail(messageId);
+    return {
+      content: [{ type: "text", text: "Email deleted successfully!" }],
+      structuredContent: { status: "deleted" },
+    };
+  }
+);
+
 // ============================================================================
 // Express App Setup
 // ============================================================================
@@ -204,6 +290,24 @@ app.post("/mcp", async (req: Request, res: Response) => {
 
   await server.connect(transport);
   await transport.handleRequest(req, res, req.body);
+});
+
+// 1. Redirect user to Google login
+app.get("/auth", (_req, res) => {
+  const url = getAuthUrl();
+  res.redirect(url);
+});
+
+// 2. Handle callback
+app.get("/oauth2callback", async (req, res) => {
+  const code = req.query.code as string;
+
+  const { tokens } = await oauth2Client.getToken(code);
+  oauth2Client.setCredentials(tokens);
+
+  console.log("✅ Tokens:", tokens);
+
+  res.send("Gmail connected successfully!");
 });
 
 // JSON error handler (Express defaults to HTML errors)
