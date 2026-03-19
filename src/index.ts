@@ -73,18 +73,18 @@ function logError(method: string, error: unknown, latencyMs: number): void {
 // ============================================================================
 
 const server = new McpServer({
-  name: "manage-email-mcp",
+  name: "gmail-assistant-mcp",
   version: "1.0.0",
 });
 
 // Register a simple "hello" tool
 server.registerTool(
-  "hello",
+  "generate_greeting",
   {
-    title: "Hello Tool",
-    description: "Returns a greeting message",
+    title: "Generate Greeting Message",
+    description: "Create a friendly personalized greeting message for users or emails.",
     inputSchema: {
-      name: z.string().describe("Name to greet"),
+      name: z.string().describe("Name of the person"),
     },
     outputSchema: {
       message: z.string(),
@@ -101,10 +101,10 @@ server.registerTool(
 
 // Register an "echo" tool for testing
 server.registerTool(
-  "echo",
+  "debug_echo",
   {
-    title: "Echo Tool",
-    description: "Echoes back the input text",
+    title: "Debug Echo Tool",
+    description: "Returns the exact input with timestamp. Useful for testing MCP connections and debugging.",
     inputSchema: {
       text: z.string().describe("Text to echo"),
     },
